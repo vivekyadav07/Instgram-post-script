@@ -50,7 +50,8 @@ IMG_PATH = "poetry.png"
 ngrok.set_auth_token("2y7V0oDHegL0t8fmCr8efub9PFn_6ijcYdeaRQaQsy9A7CUh3")
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173"])
+CORS(app, origins=["http://localhost:5173", "https://vivekyadav2o.netlify.app"], methods=["GET", "POST", "OPTIONS"])
+
 
 # Color styling
 def style_code_line(code):
