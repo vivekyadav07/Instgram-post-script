@@ -1,1 +1,8 @@
-services:\n  - type: web\n    name: insta-backend\n    env: python\n    plan: free\n    buildCommand: pip install -r requirements.txt\n    startCommand: python backend.py\n    autoDeploy: true
+services:
+  - type: web
+    name: insta-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python backend.py
+    autoDeploy: true
