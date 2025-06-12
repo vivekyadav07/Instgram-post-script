@@ -134,9 +134,7 @@ def serve_image():
     return send_file(IMG_PATH, mimetype='image/png')
 
 # Run Flask
-def run():
-    app.run(port=5050)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
-threading.Thread(target=run).start()
-public_url = ngrok.connect(5050)
-print("✅ Backend live:", public_url)
