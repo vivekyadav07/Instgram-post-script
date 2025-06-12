@@ -54,7 +54,7 @@ CORS(app, origins=["http://localhost:5173"])
 
 # Color styling
 def style_code_line(code):
-    token_pattern = r'"[^"]*"|\'[^']*\'|\w+|[^\w\s]'
+    token_pattern = r'"[^"]*"|\'[^\']*\'|\w+|[^\w\s]'
     tokens = re.findall(token_pattern, code)
     parts = []
     keywords = {'if', 'else', 'return', 'function', 'for', 'while', 'const', 'let', 'var'}
