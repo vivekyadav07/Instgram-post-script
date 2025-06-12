@@ -3,61 +3,78 @@ import os
 import zipfile
 import requests
 from flask_cors import CORS
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # Load environment variables
+
+# Install required packages
+subprocess.check_call(["pip", "install", "-q", "pyngrok", "flask", "pillow", "requests", "flask-cors", "python-dotenv"])
 
 # Load environment variables
 load_dotenv()
 
-# === Setup fonts ===
-# Download the font ZIP file from Google Drive
+# Config from environment
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+IG_USER_ID = os.getenv("IG_USER_ID")
+PUBLIC_URL = os.getenv("PUBLIC_URL")
+PORT = int(os.getenv("PORT", 10000))
+CAPTION = "Code is 😊\n\n\n  \n \n \n \n \n \n \n \n \n \n \n \n #cybersecurity #hacking #bugbounty #linux #infosec #tech #codepoetry ##CodingMeme #FullStackDev #code #TechInstagram #js #ProgrammerLife"
+
+# Download font
 url = "https://drive.google.com/uc?export=download&id=1nTlvvCmfyxniWnQRpIg4EC6wbUk7_Fwb"
 response = requests.get(url)
 with open("JetBrains_Mono.zip", "wb") as f:
     f.write(response.content)
 
-# Unzip font
 os.makedirs("fonts", exist_ok=True)
 with zipfile.ZipFile("JetBrains_Mono.zip", "r") as zip_ref:
     zip_ref.extractall("fonts")
 
-# === App Config ===
+# Kill port 5050 processes and ngrok
+try:
+    subprocess.run(["fuser", "-k", "5050/tcp"], check=True)
+except Exception:
+    pass
+try:
+    subprocess.run(["pkill", "-f", "ngrok"], check=True)
+except Exception:
+    pass
+
+# Flask app
 from flask import Flask, request, send_file, jsonify
+from pyngrok import ngrok
 from PIL import Image, ImageDraw, ImageFont
-import re, time
+import threading, time, re
 
 FONT_PATH = "fonts/JetBrainsMono-Italic-VariableFont_wght.ttf"
 IMG_PATH = "poetry.png"
-ACCESS_TOKEN = "EAAIpLZBuOm60BOZBFgq4ZBZAiAWZAq4rznOhUJyRMm9c2r4HCHDIP15l2NDWLlYfB6un5oYfGn4Ow3DRi5SULsThYMtoNLtcmcZA0DAXYwY9DwsB9Ygrkrg2o8KcZCxElT8ZAiS6kzSBDZAVzKAxoxbEdhKN2bNNBrH3gbPaCQQ4r19w9Y81E6IIcijTNyqxq"
-IG_USER_ID = "17841451784404391"
-CAPTION = "Code is 😊\n\n\n#poetic_coder #devlife #ai #coding"
 
-# Get public URL from environment (set this on Render)
-PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://localhost:10000")
+ngrok.set_auth_token("2y7V0oDHegL0t8fmCr8efub9PFn_6ijcYdeaRQaQsy9A7CUh3")
 
-# === Code coloring ===
+app = Flask(__name__)
+CORS(app, origins=["http://localhost:5173"])
+
+# Color styling
 def style_code_line(code):
-    token_pattern = r'"[^"]*"|\'[^\']*\'|\w+|[^\w\s]'
+    token_pattern = r'"[^"]*"|\'[^']*\'|\w+|[^\w\s]'
     tokens = re.findall(token_pattern, code)
     parts = []
     keywords = {'if', 'else', 'return', 'function', 'for', 'while', 'const', 'let', 'var'}
     for i, token in enumerate(tokens):
         if token in keywords:
-            parts.append((token, "#8be9fd"))  # blue
+            parts.append((token, "#8be9fd"))
         elif token == '.':
-            parts.append((token, "#ff79c6"))  # pink dot
+            parts.append((token, "#ff79c6"))
         elif i > 0 and tokens[i-1] == '.':
-            parts.append((token, "#f1fa8c"))  # yellow-green
+            parts.append((token, "#f1fa8c"))
         elif token.startswith('"') or token.startswith("'"):
-            parts.append((token, "#50fa7b"))  # green string
+            parts.append((token, "#50fa7b"))
         elif re.match(r'^\d+$', token):
-            parts.append((token, "#bd93f9"))  # purple number
+            parts.append((token, "#bd93f9"))
         elif token in {'(', ')', ';', '=', '=>', ','}:
-            parts.append((token, "#ffffff"))  # white punctuation
+            parts.append((token, "#ffffff"))
         else:
-            parts.append((token, "#ff79c6"))  # default
+            parts.append((token, "#ff79c6"))
     return parts
 
-# === Image generation ===
 def draw_code_line(draw, x, y, parts, font):
     for text, color in parts:
         draw.text((x, y), text, font=font, fill=color)
@@ -84,7 +101,6 @@ def generate_poetry_image(line1, line2, line3, output_path=IMG_PATH):
     draw.text((width - draw.textlength(wm, wm_font) - 30, height - 90), wm, font=wm_font, fill=(200, 200, 200))
     img.save(output_path)
 
-# === Instagram Posting ===
 def post_to_instagram(image_url):
     creation_resp = requests.post(
         f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media",
@@ -99,10 +115,6 @@ def post_to_instagram(image_url):
     )
     return "🎉 Posted!" if publish_resp.status_code == 200 else f"Publish failed: {publish_resp.json()}"
 
-# === Flask app ===
-app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173", "*"])  # Allow all for testing
-
 @app.route("/poetry", methods=["POST", "OPTIONS"])
 def poetry_api():
     if request.method == "OPTIONS":
@@ -112,7 +124,7 @@ def poetry_api():
     l2 = data.get("line2", "")
     l3 = data.get("line3", "")
     generate_poetry_image(l1, l2, l3)
-    time.sleep(1)  # delay for image write
+    time.sleep(1)
     image_url = f"{PUBLIC_URL}/poetry.png"
     result = post_to_instagram(image_url)
     return jsonify({"image_url": image_url, "status": result})
@@ -121,7 +133,5 @@ def poetry_api():
 def serve_image():
     return send_file(IMG_PATH, mimetype='image/png')
 
-# === Run ===
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=PORT)
